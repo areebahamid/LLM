@@ -1,0 +1,49 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - MODEL_NAME=llama2:7b
+      - FAISS_INDEX_PATH=./data/faiss_index
+      - EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+    volumes:
+      - ./backend/data:/app/data
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    command: >
+      sh -c "
+        ollama serve &
+        sleep 10 &&
+        ollama pull llama2:7b &&
+        wait
+      "
+
+volumes:
+  ollama_data:
